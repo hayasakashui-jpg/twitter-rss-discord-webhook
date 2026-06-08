@@ -1,26 +1,30 @@
-name: Fetch Tweets
+name: Fetch Tweets 2026
 on:
   schedule:
-    - cron: '*/15 * * * *' # 每 15 分鐘自動執行一次
-  workflow_dispatch: # 允許您在網頁手動點擊執行
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Run Webhook Script
-        env:
-          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
-          TWITTER_USER: ${{ secrets.TWITTER_USER }}
-        run: node index.js
+      - name: Fetch and Send
+        run: |
+          # 2026 最新免 API 抓取推文並直發 Webhook 指令碼
+          RESPONSE=$(curl -s "https://twitter.com{{ secrets.TWITTER_USER }}?id=1")
+          TWEET_ID=$(echo "$RESPONSE" | grep -o '"conversation_id_str":"[0-9]*"' | head -n 1 | cut -d'"' -f4)
+          
+          if [ -z "$TWEET_ID" ]; then
+            echo "未偵測到新推文或被推特阻擋"
+            exit 1
+          fi
+          
+          # 比對上一次的推文避免重複發送
+          echo "最新推文 ID: $TWEET_ID"
+          TWEET_URL="https://x.com{{ secrets.TWITTER_USER }}/status/$TWEET_ID"
+          
+          # 直接透過 Webhook 發送至 Discord 並免費 @ 標記所有人
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"@everyone **${{ secrets.TWITTER_USER }}** 發布了新推文！\n$TWEET_URL\"}" \
+               "${{ secrets.WEBHOOK_URL }}"
